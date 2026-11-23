@@ -20,6 +20,7 @@ from OpenGL.GL import (
     glPushMatrix,
     glRotatef,
     glScalef,
+    glTranslatef,
     glVertex3f,
 )
 from OpenGL.GLU import gluSphere

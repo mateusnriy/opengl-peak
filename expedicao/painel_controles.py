@@ -132,6 +132,9 @@ def desenhar_painel_controles(
         largura_janela: Largura atual da janela em pixels.
         altura_janela: Altura atual da janela em pixels.
     """
+    if largura_janela <= 0 or altura_janela <= 0:
+        return
+
     glPushAttrib(
         GL_ENABLE_BIT
         | GL_CURRENT_BIT

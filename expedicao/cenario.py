@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from OpenGL.GL import (
     GL_COMPILE,
     glColor3f,
+    glDeleteLists,
     glEndList,
     glGenLists,
     glNewList,
@@ -378,6 +379,11 @@ def compilar_cenario_estatico(
     if not identificador_lista:
         raise RuntimeError("Não foi possível criar a lista de exibição OpenGL.")
     glNewList(identificador_lista, GL_COMPILE)
-    desenhar_cenario_estatico(identificador_textura, arvores)
+    try:
+        desenhar_cenario_estatico(identificador_textura, arvores)
+    except Exception:
+        glEndList()
+        glDeleteLists(identificador_lista, 1)
+        raise
     glEndList()
     return identificador_lista
