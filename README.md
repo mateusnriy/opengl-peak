@@ -1,94 +1,142 @@
+<div align="center">
+
 # Expedição ao Pico
 
-Cena 3D low-poly inspirada em PEAK, para apresentação de Computação Gráfica.
-Tudo é gerado em Python: geometria, textura de terreno e faixa inferior de controles.
-Sem assets externos, shaders, VBOs, `numpy` ou controle livre de personagem/câmera.
+**Cena 3D Low-Poly Procedural em OpenGL 2.1 para Computação Gráfica**
 
-## Executar
+![OpenGL 2.1](https://img.shields.io/badge/OpenGL-2.1%20Fun%C3%A7%C3%A3o%20Fixa-0A66C2?style=for-the-badge&logo=opengl&logoColor=white)
+![Modelagem Procedural](https://img.shields.io/badge/Cena-100%25%20Procedural-1D4ED8?style=for-the-badge)
+![Zero Assets](https://img.shields.io/badge/Assets-Zero%20Arquivos%20Externos-0D9488?style=for-the-badge)
 
-Python 3.10+ e driver com OpenGL 2.1/compatibilidade e GLU, em sessão gráfica.
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![pygame-ce](https://img.shields.io/badge/pygame--ce-2.5%2B-22C55E?style=for-the-badge)](https://pyga.me/)
+[![PyOpenGL](https://img.shields.io/badge/PyOpenGL-3.1%2B-1E3A8A?style=for-the-badge)](https://pyopengl.sourceforge.net/)
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
-```
+</div>
 
-No Linux, use `python3` se `python` não existir. Se faltar a biblioteca GLU,
-instale o pacote do sistema `libglu1-mesa` (Debian/Ubuntu).
+---
 
-O terminal integrado do VS Code Snap pode exportar schemas incompatíveis com o
-GTK do sistema, causando aborto na chave `antialiasing` do schema
-`org.gnome.settings-daemon.plugins.xsettings`. Antes de carregar as bibliotecas
-gráficas, `expedicao/ambiente.py` substitui `GSETTINGS_SCHEMA_DIR` do Snap pelos
-schemas do sistema e retira diretórios Snap de `XDG_DATA_DIRS`, somente neste processo.
-Schemas personalizados fora do Snap são preservados. `CORRIGIR_ESQUEMAS_SNAP_NO_LINUX`
-em `expedicao/configuracoes.py` controla esse ajuste.
+## Sumário
 
-Com `DISPLAY` disponível, o programa também prefere X11/XWayland como alternativa
-de compatibilidade. Para escolher outro backend, defina `SDL_VIDEODRIVER` antes
-de executar, ou ajuste `PREFERIR_X11_NO_LINUX` em `expedicao/configuracoes.py`.
-Se houver aborto nativo, execute `python -u main.py --diagnostico` para rastrear
-interpretador, variáveis de ambiente e etapa de inicialização.
+- [Visão Geral](#visão-geral)
+- [Tecnologias Utilizadas](#tecnologias-utilizadas)
+- [Estrutura do Repositório](#estrutura-do-repositório)
+- [Como Executar](#como-executar)
+- [Controles](#controles)
+- [Solução de Problemas e Diagnóstico](#solução-de-problemas-e-diagnóstico)
 
-| Tecla | Ação |
-|---|---|
-| `Espaço` | Inicia; durante a sequência ou no final, reinicia para o acampamento |
-| `R` | Reinicia tudo, incluindo noite e câmera |
-| `N` | Alterna suavemente noite/dia; mantém a escolha até reiniciar |
-| `Esc` | Fecha a janela |
+---
 
-Janela redimensionável, 1280×720, limite de 60 FPS. A sequência dura 7 s de
-amanhecer + 32 s de escalada com pausas suaves nos três platôs; o orbital final
-continua até reiniciar. A fogueira e a fumaça se animam em todas as fases.
-A escalada acontece sem corda ou âncora. À noite, uma lua azulada ilumina a parte
-superior da montanha com `GL_LIGHT2`, um holofote apontado para o topo. A lua e sua
-luz desaparecem suavemente no amanhecer e retornam ao alternar para noite com `N`.
+## Visão Geral
 
-## Estrutura Modular do Projeto
+**Expedição ao Pico** é uma animação 3D *low-poly* inspirada no jogo *PEAK*, desenvolvida em Python puro para a disciplina de **Computação Gráfica**. Toda a geometria, a textura procedural do solo, o personagem articulado, a iluminação e a interface 2D de atalhos são gerados em tempo de execução utilizando o pipeline fixo do **OpenGL 2.1** — sem modelos ou imagens externas, shaders, VBOs ou `numpy`.
+
+- **Narrativa Automática:** Inicia à noite no acampamento (`ACAMPAMENTO`), realiza `7 s` de amanhecer e transição de câmera até o paredão (`TRANSICAO_CAMERA`), executa `32 s` de escalada com pausas em três platôs (`ESCALADA`) e finaliza em órbita contínua ao redor do cume nevado (`FINAL`).
+- **Iluminação e Atmosfera:** Combina Sol direcional (`GL_LIGHT0`), fogueira pontual oscilante (`GL_LIGHT1`), holofote lunar noturno (`GL_LIGHT2`), neblina linear (`GL_FOG`) e partículas semitransparentes de fumaça.
+- **Execução e Calibração:** Janela redimensionável (`1280×720`) limitada a `60 FPS`, com constantes de tempo, cores, câmeras e sombreamento (`GL_FLAT` / `GL_SMOOTH`) centralizadas em [`expedicao/configuracoes.py`](./expedicao/configuracoes.py).
+
+---
+
+## Tecnologias Utilizadas
+
+| Categoria | Tecnologia | Papel no Projeto |
+| :--- | :--- | :--- |
+| **Linguagem** | Python `3.10+` | Lógica da simulação, matemática vetorial e geração procedural com biblioteca padrão (sem `numpy`). |
+| **Janela e Eventos** | [`pygame-ce`](./requirements.txt) | Criação do contexto OpenGL, controle de eventos/FPS e geração inicial das superfícies de textura e HUD. |
+| **Renderização 3D** | [`PyOpenGL`](./requirements.txt) | Bindings do pipeline fixo OpenGL 2.1 (matrizes, iluminação Phong, Display List, texturas e *blending*). |
+| **Utilitários GL** | `OpenGL.GLU` | Projeção perspectiva (`gluPerspective`), quádricas esféricas (`gluSphere`) e mipmaps (`gluBuild2DMipmaps`). |
+
+---
+
+## Estrutura do Repositório
 
 ```text
 opengl-peak/
-├── main.py                         # Ponto de entrada: janela, eventos e loop principal
-├── requirements.txt                # Dependências (pygame e PyOpenGL)
-├── .agents/rules/padroes-codigo.md # Regras de nomenclatura em português e docstrings
+├── main.py                     # Ponto de entrada: janela OpenGL 2.1, eventos e loop a 60 FPS
+├── requirements.txt            # Dependências Python (pygame-ce e PyOpenGL)
+├── README.md                   # Visão geral e instruções de execução
+│
 └── expedicao/
-    ├── configuracoes.py            # Constantes ajustáveis e poses de câmera
-    ├── ambiente.py                 # Diagnóstico e saneamento Linux/Snap (antes de pygame/GL)
-    ├── matematica.py               # Interpolações, smoothstep, amortecimento e normal de face
-    ├── simulacao.py                # EstadoCena, máquina de fases e trajetórias cinemáticas
-    ├── primitivas.py               # Face, cubo, bloco, esfera, cilindro, cone e segmento
-    ├── terreno.py                  # Textura procedural (ruído periódico + mipmaps) e solo
-    ├── cenario.py                  # Montanha, platôs, pico, árvores, acampamento e Display List
-    ├── personagem.py               # Hierarquia articulada do escoteiro (pilha de matrizes)
-    ├── iluminacao.py               # Sol direcional, fogueira pontual e holofote lunar (Phong)
-    ├── efeitos.py                  # Chamas, fumaça ordenada back-to-front, lua e marcadores
-    ├── painel_controles.py         # Faixa inferior 2D via projeção ortográfica (`glOrtho`)
-    └── renderizacao.py             # Estado OpenGL, projeção, câmera manual e composição 3D
+    ├── __init__.py             # Inicializador do pacote (sem imports automáticos)
+    ├── ambiente.py             # Ajuste de compatibilidade Linux/Snap e modo --diagnostico
+    ├── configuracoes.py        # Parâmetros ajustáveis da cena, câmeras, luzes e durações
+    ├── matematica.py           # Interpolações, smoothstep, amortecimento e normais de face
+    ├── simulacao.py            # Estado da cena, máquina de fases e trajetórias cinemáticas
+    ├── primitivas.py           # Primitivas 3D (faces, cubos, blocos, esferas, cones e segmentos)
+    ├── terreno.py              # Textura procedural com mipmaps e malha subdividida do solo
+    ├── cenario.py              # Acampamento, árvores, montanha, platôs, cume e Display List
+    ├── personagem.py           # Modelagem hierárquica articulada do escoteiro
+    ├── iluminacao.py           # Configuração das luzes (Sol, fogueira e holofote lunar)
+    ├── efeitos.py              # Chamas, fumaça transparente, lua e marcadores de luz
+    ├── painel_controles.py     # Faixa inferior 2D de controles em projeção ortográfica
+    └── renderizacao.py         # Estado global OpenGL, projeção, câmera e desenho da cena
 ```
 
-## Referência para a Apresentação
+---
 
-Em `expedicao/configuracoes.py`, ajuste durações, cores, alturas, poses de câmera e luzes.
-`USAR_SOMBREAMENTO_SUAVE = False` usa `GL_FLAT`; altere para `True` para comparar
-com `GL_SMOOTH` (mais evidente na cabeça, lua e fumaça; blocos preservam suas arestas).
+## Como Executar
 
-| Conceito de Computação Gráfica | Tags | Módulo | Funções / Estruturas Principais |
-|---|---|---|---|
-| Primitivas manuais e normais (CCW) | `[PRIMITIVAS]` | `expedicao/matematica.py`, `expedicao/primitivas.py` | `calcular_normal_face`, `desenhar_face`, `desenhar_cubo`, `desenhar_bloco`, `desenhar_cilindro`, `desenhar_segmento` |
-| Modelagem hierárquica (pilha de matrizes) | `[PERSONAGEM]`, `[BRACO]`, `[PERNA]` | `expedicao/personagem.py` | `desenhar_personagem`, `desenhar_braco`, `desenhar_perna`, `desenhar_cabeca_e_chapeu` |
-| Cenário estático e Display List | `[ACAMPAMENTO]`, `[BARRACA]`, `[ARVORES]`, `[PAREDE_1..3]`, `[PLATO_1..3]`, `[PICO_NEVADO]`, `[MASSA_LATERAL]`, `[OTIMIZACAO]` | `expedicao/cenario.py` | `gerar_arvores`, `desenhar_secao_rochosa`, `desenhar_cenario_estatico`, `compilar_cenario_estatico` |
-| Textura procedural + Mipmaps | `[TEXTURA]`, `[TERRENO]` | `expedicao/terreno.py` | `_calcular_ruido_periodico`, `criar_textura_terreno`, `desenhar_terreno` |
-| Câmera manual (sem `gluLookAt`) e projeção | `[CAMERA]`, `[JANELA]` | `expedicao/renderizacao.py` | `aplicar_camera`, `atualizar_projecao`, `inicializar_opengl`, `desenhar_cena` |
-| Iluminação local (3 fontes) e amanhecer | `[ILUMINACAO]`, `[LUA]`, `[ANIM_A6_AMANHECER]` | `expedicao/iluminacao.py` | `configurar_iluminacao`, `configurar_luz_sol`, `configurar_luz_fogueira`, `configurar_luz_lua` |
-| Animações, transparência e neblina | `[ANIM_A1_CHAMAS]`, `[ANIM_A5_FUMACA]`, `[MARCADORES]` | `expedicao/efeitos.py` | `desenhar_chamas`, `desenhar_fumaca`, `desenhar_lua`, `desenhar_marcadores_luz` |
-| Máquina de estados e trajetórias | `[FASES]`, `[ANIM_A2_CAMERA]`, `[ANIM_A3_ESCALADA]`, `[ANIM_A7_ORBITAL_FINAL]` | `expedicao/simulacao.py` | `EstadoCena`, `atualizar_fases`, `interpolar_camera`, `calcular_posicao_escalada`, `calcular_camera_orbital_final` |
-| Interface 2D ortográfica | `[HUD]` | `expedicao/painel_controles.py` | `PainelControles`, `criar_painel_controles`, `desenhar_painel_controles` |
-| Bootstrap Linux e loop de eventos | `[AMBIENTE]`, `[JANELA]` | `expedicao/ambiente.py`, `main.py` | `preparar_ambiente_execucao`, `processar_eventos`, `executar_aplicacao` |
+### Pré-requisitos
 
-Validação de sintaxe e compilação de todos os módulos:
+- **Python 3.10+** (em Debian/Ubuntu, instale também `python3-venv` caso necessário)
+- **Sessão gráfica ativa** com suporte a **OpenGL 2.1** e **GLU**
+  - No Debian/Ubuntu, se a biblioteca GLU não estiver instalada:
+    ```bash
+    sudo apt install libglu1-mesa
+    ```
 
-```bash
-python -m compileall main.py expedicao
-```
+### Passo a Passo
+
+1. **Crie e ative o ambiente virtual:**
+   - **Linux / macOS:**
+     ```bash
+     python3 -m venv .venv
+     source .venv/bin/activate
+     ```
+   - **Windows (PowerShell):**
+     ```powershell
+     python -m venv .venv
+     .\.venv\Scripts\Activate.ps1
+     ```
+
+2. **Instale as dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Inicie a aplicação:**
+   - **Linux / macOS:**
+     ```bash
+     python3 main.py
+     ```
+   - **Windows:**
+     ```powershell
+     python main.py
+     ```
+
+---
+
+## Controles
+
+| Tecla | Ação |
+| :---: | :--- |
+| `Espaço` | Inicia a expedição no acampamento; nas demais fases ou no final, reinicia a sequência |
+| `R` | Reinicia toda a cena, incluindo câmera e ciclo automático noite/dia |
+| `N` | Alterna suavemente entre noite e dia (mantém a escolha até reiniciar) |
+| `Esc` | Fecha a janela e encerra a aplicação |
+
+---
+
+## Solução de Problemas e Diagnóstico
+
+- **Aviso sobre `numpy` no terminal:** A mensagem `Unable to import OpenGL.arrays.numpymodule.NumpyHandler: No numpy module present` é apenas informativa e esperada, pois o projeto não utiliza `numpy`.
+- **Pasta do projeto movida:** Caso o diretório do projeto tenha sido movido após criar a `.venv`, recrie o ambiente virtual (`rm -rf .venv && python3 -m venv .venv`) e reinstale o `requirements.txt`.
+- **Linux (VS Code Snap e Wayland/X11):** O módulo `expedicao/ambiente.py` corrige automaticamente conflitos de schemas GTK do VS Code Snap no processo atual e prioriza `SDL_VIDEODRIVER=x11` quando `DISPLAY` está ativo. Para forçar outro driver manualmente, defina `SDL_VIDEODRIVER` antes do comando.
+- **Comandos de verificação e diagnóstico:**
+  ```bash
+  # Validar compilação e sintaxe dos módulos
+  python3 -m compileall main.py expedicao
+
+  # Rastrear inicialização de vídeo, variáveis de ambiente e versão OpenGL
+  python3 -u main.py --diagnostico
+  ```
